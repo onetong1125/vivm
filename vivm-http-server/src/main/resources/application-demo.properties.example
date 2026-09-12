@@ -1,0 +1,7 @@
+# Copy these keys to .local/application-demo.properties and fill in local values.
+# Demo uses the local database with Fake Libvirt/SSH adapters.
+spring.datasource.url=jdbc:mysql://localhost:3306/vivm_demo
+spring.datasource.username=YOUR_DATABASE_USER
+spring.datasource.password=YOUR_DATABASE_PASSWORD
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=update

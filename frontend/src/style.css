@@ -11,6 +11,8 @@ input, select { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padd
 header { display: flex; align-items: center; gap: 18px; height: 56px; padding: 0 24px; background: #172554; color: white; }
 header strong { font-size: 20px; }
 header span { margin-left: auto; }
+header .demo-badge { margin-left: 0; }
+.demo-badge { width: fit-content; padding: 3px 7px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 700; }
 .shell { min-height: 100vh; }
 .auth-card { width: min(400px, calc(100vw - 32px)); margin: 12vh auto; padding: 28px; background: #fff; border-radius: 8px; box-shadow: 0 8px 30px rgb(15 23 42 / .1); }
 .auth-card form, .compact-form, .forms form, .modal { display: grid; gap: 14px; }

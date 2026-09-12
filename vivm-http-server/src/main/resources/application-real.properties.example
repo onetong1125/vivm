@@ -1,0 +1,24 @@
+# Copy these keys to .local/application-real.properties and fill in local values.
+# The .local directory is ignored by Git and is not packaged into the application jar.
+spring.datasource.url=jdbc:mysql://localhost:3306/vivm
+spring.datasource.username=YOUR_DATABASE_USER
+spring.datasource.password=YOUR_DATABASE_PASSWORD
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=update
+
+libvirt.uri=YOUR_LIBVIRT_URI
+
+ssh.host=YOUR_SSH_HOST
+ssh.port=22
+ssh.username=YOUR_SSH_USER
+ssh.password=YOUR_SSH_PASSWORD
+ssh.private-key-path=
+ssh.passphrase=
+ssh.known-hosts-path=/path/to/known_hosts
+ssh.connection-timeout-millis=30000
+ssh.command-timeout-millis=120000
+ssh.keep-alive-interval-millis=60000
+
+backup.create-script=/path/to/new_backup.sh
+backup.restore-script=/path/to/restore_backup.sh
+vivm.vnc-host=YOUR_VNC_HOST

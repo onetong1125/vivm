@@ -15,6 +15,7 @@ const registerForm = ref({ userName: '', email: '', userPassword: '', confirmPas
 const authMode = ref('login')
 
 const isAdmin = computed(() => currentUser.value?.role === 1)
+const isDemo = import.meta.env.MODE === 'demo'
 
 onMounted(loadCurrentUser)
 
@@ -75,6 +76,7 @@ async function logout() {
 
     <section v-else-if="!currentUser" class="auth-card">
       <h1>VIVM</h1>
+      <p v-if="isDemo" class="demo-badge">DEMO：外部资源由本地 Fake 模拟</p>
       <p class="hint">虚拟镜像版本管理</p>
       <form v-if="authMode === 'login'" @submit.prevent="login">
         <label>用户名<input v-model="loginForm.username" required autocomplete="username" /></label>
@@ -97,6 +99,7 @@ async function logout() {
     <template v-else>
       <header>
         <strong>VIVM</strong>
+        <span v-if="isDemo" class="demo-badge">DEMO</span>
         <span>{{ currentUser.userName }}</span>
         <button class="link" @click="logout">退出登录</button>
       </header>
