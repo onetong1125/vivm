@@ -1,5 +1,6 @@
 package com.ttt.vivm.controller;
 
+import com.ttt.vivm.dto.RegisterUserRequest;
 import com.ttt.vivm.dto.UserViewDTO;
 import com.ttt.vivm.model.User;
 import com.ttt.vivm.service.UserService;
@@ -39,12 +40,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody User user) {
-        if (!user.getUserPassword().equals(user.getConfirmPassword())) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserRequest request) {
+        if (!request.userPassword().equals(request.confirmPassword())) {
             return ResponseEntity.badRequest().body(Map.of("message", "两次输入的密码不一致"));
         }
 
-        Map<String, String> errors = userService.registerUser(user);
+        Map<String, String> errors = userService.registerUser(request);
         if (errors != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(errors);
         }

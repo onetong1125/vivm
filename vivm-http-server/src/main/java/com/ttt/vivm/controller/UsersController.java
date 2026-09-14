@@ -1,8 +1,8 @@
 package com.ttt.vivm.controller;
 
+import com.ttt.vivm.cycle.domain.identity.model.entity.UserE;
 import com.ttt.vivm.dto.UserOptDTO;
 import com.ttt.vivm.dto.UserViewDTO;
-import com.ttt.vivm.model.User;
 import com.ttt.vivm.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -36,12 +36,12 @@ public class UsersController {
         System.out.println("-----------------API: users/getUser-----------------");
         int id = Integer.parseInt(userId);
         System.out.println("parameter id: " + id);
-        Optional<User> optionalUser = userService.findById(id);
+        Optional<UserE> optionalUser = userService.findById(id);
         if (optionalUser.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
         }
 
-        User user = optionalUser.get();
+        UserE user = optionalUser.get();
         return ResponseEntity.ok(new UserViewDTO(user));
     }
 

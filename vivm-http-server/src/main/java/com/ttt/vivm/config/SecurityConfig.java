@@ -1,9 +1,9 @@
 package com.ttt.vivm.config;
 
 import com.ttt.vivm.service.CustomUserDetailsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,8 +20,15 @@ import org.springframework.security.config.annotation.authentication.configurati
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    private final CustomUserDetailsService userDetailsService;
+    private final String rememberMeKey;
+
+    public SecurityConfig(
+            CustomUserDetailsService userDetailsService,
+            @Value("${security.remember-me-key}") String rememberMeKey) {
+        this.userDetailsService = userDetailsService;
+        this.rememberMeKey = rememberMeKey;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -36,7 +43,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.ALWAYS) // 允许创建 session
                 )
                 .rememberMe(remember -> remember
-                        .key("uniqueAndSecret")  // Remember-me 需要一个 Key
+                        .key(rememberMeKey)
                         .tokenValiditySeconds(86400) // 设置 Remember-me 过期时间为1天
                 )
                 .formLogin(form -> form

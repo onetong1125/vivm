@@ -1,8 +1,8 @@
 # VIVM DDD 与 MyBatis-Plus 具体实施计划
 
-日期：2026-09-11。状态：R0、R1 本机验收完成，等待批准进入 R2。本文件细化并更新 [DDD 设计](ddd-refactoring-plan.md)，业务术语见 [CONTEXT.md](../CONTEXT.md)。
+日期：2026-09-11。状态：R0～R2 本机验收完成且 R2 已获批准，尚未进入 R3。本文件细化并更新 [DDD 设计](ddd-refactoring-plan.md)，业务术语见 [CONTEXT.md](../CONTEXT.md)。
 
-2026-09-12 批次更新：R0、R1 本机基线已完成，见 [R0 报告](refactoring/r0-report.md)与 [R1 报告](refactoring/r1-report.md)；真实数据及真实 Libvirt/SSH 核对未执行。R2～R9 尚未开始。按用户要求一次只执行一个批次，报告修改、依据、验证证据后等待明确批准；不会自动推进下一批。
+2026-09-12 批次更新：R0～R2 本机验收已完成，见 [R0 报告](refactoring/r0-report.md)、[R1 报告](refactoring/r1-report.md)与 [R2 报告](refactoring/r2-report.md)；真实生产数据及真实 Libvirt/SSH 核对未执行。R3～R9 尚未开始。按用户要求一次只执行一个批次，报告修改、依据、验证证据后等待明确批准；不会自动推进下一批。
 
 新增结构依据：[crypto-transfer 风格映射](refactoring/reference-style.md)。目标收敛为 `vivm-cycle / vivm-dao / vivm-connector / vivm-http-server` 四个 Maven 模块；采用 AppService/DomainService、model/entity/valueobj/req、repo/impl、assembler 命名。每个业务动作是对应 AppService 的一个方法，不创建 `*UseCase` 类。R0～R9 业务职责和验收不变。R1 同时建立构建骨架，旧源码先整体迁到 HTTP 模块以保持单份定义，再逐批迁移。未来命令调整为聚合根测试、指定 http-server 启动。
 
@@ -64,12 +64,12 @@ AppService 方法接收 `actorId + Command + operationId` 等独立于 HTTP 的�
 
 ### 3.2 表与迁移拆分
 
-保留旧主键值、原有表名和用户数据，先扩展、回填、验证，再删除旧关系。下列 V 编号在确认当前没有既有迁移历史后使用；不能对非空库盲目 baseline。
+2026-09-14 用户确认：旧数据位于 `vivm_db`，全部可以舍弃，重构后重新构造项目数据。因此 `vivm_db` 不作为数据迁移目标；目标环境从空库执行版本化 SQL。R2 的兼容表及回填仍用于分批替换当前 JPA 代码，避免同一批次重写全部资源路径，不再承担保存旧业务数据的承诺。
 
 | 迁移 | 具体内容 | 必须验证 |
 | --- | --- | --- |
-| `V1__legacy_baseline.sql` | 由核对后的旧 schema 定义空库基线；存量库独立记录匹配结果 | 空库建库与存量基线一致，不能凭 JPA 猜生产表 |
-| `V2__resource_fields.sql` | img 增加 pool_id、parent_image_id、storage_kind、visibility、lifecycle；vm 增加 image_id；version 增加 pool_id；pool 增加 root_image_id；user 增加账户状态 | 关联回填无孤儿/多父/跨池；一镜像多 VM 保留；旧状态不被错误转换为长期占用 |
+| `V1__legacy_baseline.sql` | 为尚未迁移的 JPA 资源路径建立过渡表结构 | 空库可重复建库，当前旧路径可在迁移期间运行 |
+| `V2__resource_fields.sql` | img 增加 pool_id、parent_image_id、storage_kind、visibility、lifecycle；vm 增加 image_id；version 增加 pool_id；pool 增加 root_image_id；user 增加账户状态 | 空库结构正确；兼容夹具只验证过渡路径，不代表需要迁移 `vivm_db` 数据 |
 | `V3__operation_and_access.sql` | operation_task、pool_permission、池准入记录、image_occupancy | 名称预留与资源准入可竞争；业务状态和执行阶段独立 |
 | `V4__resource_constraints.sql` | 回填后收紧外键/非空/唯一性；版本成员增加活动成员与依赖文件标记 | root_image_id 与池归属一致；公开祖先合法；权限种子没有扩大授权 |
 | `V5__retire_legacy_relations.sql` | 仅在 R9 验收后移除被取代的 img_pool、img_child、img_vm、version_pool 和旧字段 | 应用与迁移脚本无旧写入；不能删除仍需要的 user_img/user_vm/version_img |
@@ -131,11 +131,11 @@ R4 先使用每池短数据库事务序列化准入判定，记录池级活动�
 
 修改 `pom.xml`，加入 Boot 3 对应 MyBatis-Plus Starter、Flyway 及选定数据库所需模块；移除手动固定 Mockito 版本时先验证测试兼容，避免顺带升级其他依赖。
 
-- [ ] 增加 `config/MybatisConfiguration`、明确 JDBC 事务管理器、V1～V3 迁移；新库与旧库迁移测试分开。
-- [ ] 先迁移 identity 的 Row/Mapper/Repository 与认证读取路径，让登录/注册/用户列表验证首批 MyBatis 映射；注册使用独立请求 DTO，不直接绑定持久化 User。
-- [ ] 生产 Secret、SSH Host Key 配置外置；保留 Session、CSRF，增加 spring-security-test 对应的鉴权测试。
-- [ ] 旧 JPA 路径明确使用其事务管理器，新路径只用 JDBC 事务；禁止一次原子写操作混用两者。
-- [ ] 新增 `IdentityPersistenceIT`、`MigrationIT`，本机专用 MySQL 验证唯一性、多表事务失败回滚；容器可用才使用 Testcontainers。
+- [x] 增加 `config/MybatisConfiguration`、明确 JDBC 事务管理器、V1～V3 迁移；新库与旧库迁移测试分开。
+- [x] 先迁移 identity 的 Row/Mapper/Repository 与认证读取路径，让登录/注册/用户列表验证首批 MyBatis 映射；注册使用独立请求 DTO，不直接绑定持久化 User。
+- [x] 生产 Secret、SSH Host Key 配置外置；保留 Session、CSRF，增加 spring-security-test 对应的鉴权测试。
+- [x] 旧 JPA 路径明确使用其事务管理器，新路径只用 JDBC 事务；禁止一次原子写操作混用两者。
+- [x] 新增 `IdentityPersistenceIT`、`MigrationIT`，本机专用 MySQL 验证唯一性、多表事务失败回滚；容器可用才使用 Testcontainers。
 
 通过标准：登录/注册/CSRF/分页契约通过；空库迁移和夹具旧库迁移通过。JPA 此时仍可为未迁移资源路径保留，不能提前删除。
 
@@ -240,10 +240,10 @@ R4 先使用每池短数据库事务序列化准入判定，记录池级活动�
 
 ## 6. 迁移与回退操作顺序
 
-1. 建立测试夹具与旧库 schema 清单；做数据库副本备份并验证可恢复后，才处理真实存量库。
-2. 扩展列/表，回填并核对；持久化迁移以模块完整写入集合为边界，禁止 JPA 与 MyBatis 在同一事务内隐式混写。
+1. 保留测试夹具与旧 schema 清单作为兼容参考；不迁移 `vivm_db` 数据，目标环境从空库重建项目数据。
+2. 过渡阶段扩展列/表；持久化迁移以模块完整写入集合为边界，禁止 JPA 与 MyBatis 在同一事务内隐式混写。
 3. 开发可分批，生产切换必须在维护窗口停止旧写入并核对在途操作，建立已有运行资源占用；切换期间不允许旧版本继续写新状态。
-4. 校验新路径后收紧约束；旧关联表先留存。真数据不符合新规则时报告冲突，不能自动选一个所有者或丢掉边。
+4. 校验新路径后收紧约束；旧关联表只保留到对应 JPA 路径迁移完成，不为可舍弃数据增加冲突修复逻辑。
 5. 回退应用前检查 schema 兼容、在途操作和外部状态；旧版本不认识新占用/生命周期时不能直接恢复其写权限。
 6. R9 通过后再单独移除旧关系；外部文件、虚拟机变更不能用数据库回滚冒充恢复。
 

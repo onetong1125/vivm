@@ -1,5 +1,6 @@
 package com.ttt.vivm.dto;
 
+import com.ttt.vivm.cycle.domain.identity.model.entity.UserE;
 import com.ttt.vivm.model.User;
 import lombok.Data;
 
@@ -19,6 +20,15 @@ public class UserViewDTO {
         this.role = user.getRole();
         this.balance = user.getBalance().doubleValue();
         this.ossSpace = user.getOssSpace();
+    }
+
+    public UserViewDTO(UserE user) {
+        this.userId = user.id();
+        this.userName = user.userName();
+        this.email = user.email();
+        this.role = user.role();
+        this.balance = user.balance().doubleValue();
+        this.ossSpace = user.ossSpace();
     }
 
 }

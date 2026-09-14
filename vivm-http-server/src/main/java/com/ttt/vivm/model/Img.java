@@ -79,9 +79,9 @@ public class Img {
     @ToString.Exclude
     private Set<VersionImg> versionImgs;
 
-    public static final int PUBLIC_IMG_TYPE = 0;    // 公共镜像，所有用户可查看，管理员可删除，全量存储
+    public static final int PUBLIC_IMG_TYPE = 0;    // 旧模型同时表示公共与基础，R2 后仅用于兼容旧路径
 
-    public static final int PRIVATE_IMG_TYPE = 1;   // 仅拥有的用户和管理员可操作，增量存储
+    public static final int PRIVATE_IMG_TYPE = 1;   // 旧模型同时表示私有与增量，R2 后仅用于兼容旧路径
 
     public static final int IS_DELETE = 1;
 
