@@ -1,8 +1,8 @@
 # VIVM DDD 与 MyBatis-Plus 具体实施计划
 
-日期：2026-09-11。状态：R0～R2 本机验收完成且 R2 已获批准，尚未进入 R3。本文件细化并更新 [DDD 设计](ddd-refactoring-plan.md)，业务术语见 [CONTEXT.md](../CONTEXT.md)。
+日期：2026-09-11。状态更新于 2026-11-17：R0～R2 本机验收完成且获批准；R3 代码及本机验证完成，用户已批准提交，未进入 R4。本文件细化并更新 [DDD 设计](ddd-refactoring-plan.md)，业务术语见 [CONTEXT.md](../CONTEXT.md)。
 
-2026-09-12 批次更新：R0～R2 本机验收已完成，见 [R0 报告](refactoring/r0-report.md)、[R1 报告](refactoring/r1-report.md)与 [R2 报告](refactoring/r2-report.md)；真实生产数据及真实 Libvirt/SSH 核对未执行。R3～R9 尚未开始。按用户要求一次只执行一个批次，报告修改、依据、验证证据后等待明确批准；不会自动推进下一批。
+2026-09-24 批次更新：报告见 [R0](refactoring/r0-report.md)、[R1](refactoring/r1-report.md)、[R2](refactoring/r2-report.md) 与 [R3](refactoring/r3-report.md)；真实生产数据及真实 Libvirt/SSH 核对未执行。R4～R9 尚未开始。按用户要求一次只执行一个批次，报告修改、依据、验证证据后等待明确批准；不会自动推进下一批。
 
 新增结构依据：[crypto-transfer 风格映射](refactoring/reference-style.md)。目标收敛为 `vivm-cycle / vivm-dao / vivm-connector / vivm-http-server` 四个 Maven 模块；采用 AppService/DomainService、model/entity/valueobj/req、repo/impl、assembler 命名。每个业务动作是对应 AppService 的一个方法，不创建 `*UseCase` 类。R0～R9 业务职责和验收不变。R1 同时建立构建骨架，旧源码先整体迁到 HTTP 模块以保持单份定义，再逐批迁移。未来命令调整为聚合根测试、指定 http-server 启动。
 
@@ -10,7 +10,7 @@
 
 已读取用户指定目录 `/Users/xuyitong/Library/Mobile Documents/iCloud~md~obsidian/Documents/打工/Projects/vivm` 中全部 11 篇文档：00 总体规划、01 安全、02 外部边界、03 任务中心、04 幂等、05 冲突、06 Redisson、07 补偿、08 对账、09 WebSocket、10 简历证据。原笔记仅作为输入，不修改、不勾选完成项。
 
-当前请求的交付是实施计划，不是开始重构。下述文件、SQL 和命令中，尚不存在的内容均为实施任务，不能视为已实现。
+本文最初交付为实施计划，后续按批次授权实施。下述尚未勾选的内容均为后续任务，不能视为已实现；实际验证范围以各批报告为准。
 
 本次重构完成条件：
 
@@ -141,15 +141,18 @@ R4 先使用每池短数据库事务序列化准入判定，记录池级活动�
 
 ### R3：镜像、池与权限领域模型
 
+2026-11-17：详见 [R3 具体计划](refactoring/r3-plan.md) 和 [R3 报告](refactoring/r3-report.md)。本机验证完成，用户已批准提交；以下勾选不代表后续写流程已接入。
+
 修改旧 `model/Img.java`、`Pool.java` 相关映射的使用方；新增 image 模块领域模型、持久化与查询实现。
 
-- [ ] 定义 BASE/DELTA、PUBLIC/PRIVATE、ACTIVE/DELETED 三组独立含义；父 ID、池 ID、根 ID 明确，关联读取不加载对象图。
-- [ ] 用领域策略表达：普通用户不可依赖他人私有镜像；公共镜像全部祖先必须公共；逻辑删除祖先仍可支撑已有后代。
-- [ ] 将 ImgChild、ImgPool 的现有存储先由 Mapper 适配读取，按迁移回填方案转外键；不在正常读取时静默修复违规旧数据。
-- [ ] `ImageDetailsDTO`、`ImgDTO` 改由查询实现投影；授权同时覆盖列表、详情和写入。
-- [ ] 新增 `ImagePolicyTest`、`ImageQueryIT`、`ResourceAuthorizationTest`，测试多层祖先与跨用户拒绝。
+- [x] 定义 BASE/DELTA、PUBLIC/PRIVATE、ACTIVE/DELETED 三组独立含义；父 ID、池 ID、根 ID 明确，关联读取不加载对象图。
+- [x] 用领域策略表达：所有用户（包括管理员）不可依赖他人私有镜像创建自己的镜像；公共镜像全部祖先必须公共；逻辑删除祖先仍可支撑已有后代。写端点接入留 R5。
+- [x] 模型区分私有归属 `ownerId`、创建者 `createdBy` 与管理权限；公共 owner 为 null，创建者不用于授权。账户删除保留公共资源的实际闭环及公共管理主体留 R7。
+- [x] 将仍由旧写流程维护的字段及 ImgChild、ImgPool 关系作为过渡查询的单一权威来源，通过 Mapper 投影成新模型；写流程切换前不直接读取一次性回填后已可能过时的新列，也不在读取时修复数据。
+- [x] `ImgDetailsDTO`、`ImgDTO` 改由查询实现投影；普通列表只返回 ACTIVE 且对主体可见的镜像。完整祖先查询仅供内部规则使用，不对用户暴露其他人的分支。
+- [x] 新增 `ImagePolicyTest`、`ImageQueryIT`、`ResourceAuthorizationTest` 和 `LegacyImageWriteQueryTest`，覆盖管理员派生资格被拒的领域规则、公共父下跨用户兄弟分支隔离及旧创建/删除/恢复后的查询一致性。
 
-通过标准：镜像关系与已确认规则可独立于 Spring/数据库进行单测；查询能区分普通可见列表与完整依赖查询。暂不新建发布/改父功能。
+通过标准：镜像关系与已确认规则可独立于 Spring/数据库进行单测；查询能区分普通可见列表与完整依赖查询。克隆的池授权条件在 R5 接入写流程前确定，R3 不把池操作权限作为公共镜像可见或可读的附加条件。暂不新建发布/改父功能。
 
 ### R4：最小操作记录与原子准入
 

@@ -1,6 +1,8 @@
 package com.ttt.vivm.controller;
 
 import com.ttt.vivm.cycle.port.ExternalOperationException;
+import com.ttt.vivm.cycle.domain.resource.image.model.valueobj.ImageActor;
+import com.ttt.vivm.cycle.domain.resource.image.query.ImageCatalog;
 import com.ttt.vivm.dto.ImgDTO;
 import com.ttt.vivm.dto.ImgDetailsDTO;
 import com.ttt.vivm.model.Img;
@@ -17,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/imgs")
@@ -28,6 +29,8 @@ public class ImageController {
     private UserImageService userImageService;
     @Autowired
     private PoolService poolService;
+    @Autowired
+    private ImageCatalog imageCatalog;
 
     /**
      * 创建克隆镜像
@@ -130,17 +133,12 @@ public class ImageController {
      */
     @GetMapping("/list")
     public ResponseEntity<List<ImgDTO>> listImages(
-            @RequestParam(required = false, defaultValue = "") String search
+            @RequestParam(required = false, defaultValue = "") String search,
+            @AuthenticationPrincipal User currentUser
     ) {
-        List<Img> images;
-        if (search.isEmpty()) {
-            images = imageService.getAllImages();
-        }
-        else {
-            images = imageService.searchImagesByName(search);
-        }
-        List<ImgDTO> imgDTOS = images.stream().map(ImgDTO::new).collect(Collectors.toList());
-        return ResponseEntity.ok(imgDTOS);
+        List<ImgDTO> images = imageCatalog.listVisible(actor(currentUser), search)
+                .stream().map(ImgDTO::new).toList();
+        return ResponseEntity.ok(images);
     }
 
     // --------------------------------获取虚拟镜像详情-----------------------------------
@@ -150,21 +148,15 @@ public class ImageController {
      * @return 虚拟镜像详细信息
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getImageDetails(@PathVariable String id) {
-        try {
-            Optional<Img> imgOptional = imageService.findById(Integer.parseInt(id));
+    public ResponseEntity<ImgDetailsDTO> getImageDetails(
+            @PathVariable int id,
+            @AuthenticationPrincipal User currentUser) {
+        return imageCatalog.getVisible(actor(currentUser), id)
+                .map(details -> ResponseEntity.ok(new ImgDetailsDTO(details)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
-            if (imgOptional.isPresent()) {
-                Img img = imgOptional.get();
-                ImgDetailsDTO imgDetailsDTO = new ImgDetailsDTO(img);
-                return ResponseEntity.ok(imgDetailsDTO);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("获取虚拟镜像详情失败：" + e.getMessage());
-        }
+    private ImageActor actor(User currentUser) {
+        return new ImageActor(currentUser.getUserId(), currentUser.getRole() == 1);
     }
 }

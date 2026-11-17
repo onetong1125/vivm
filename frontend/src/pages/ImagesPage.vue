@@ -6,6 +6,9 @@ const images = ref([])
 const search = ref('')
 const message = ref('')
 const clone = ref({ imgName: '', parentName: '' })
+const storageLabels = { BASE: '基础镜像', DELTA: '增量镜像' }
+const visibilityLabels = { PUBLIC: '公共', PRIVATE: '私有' }
+const lifecycleLabels = { ACTIVE: '可用', DELETED: '已删除' }
 
 onMounted(load)
 
@@ -55,7 +58,7 @@ async function remove(imgId) {
   </form>
   <form class="search" @submit.prevent="load"><input v-model="search" placeholder="搜索镜像名称" /><button>搜索</button></form>
   <table>
-    <thead><tr><th>ID</th><th>名称</th><th>类型</th><th>创建时间</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody><tr v-for="image in images" :key="image.imgId"><td>{{ image.imgId }}</td><td>{{ image.imgName }}</td><td>{{ image.imgType }}</td><td>{{ image.createDate }}</td><td>{{ image.isDelete === 1 ? '已删除' : '可用' }}</td><td><button class="danger" @click="remove(image.imgId)">删除</button></td></tr></tbody>
+    <thead><tr><th>ID</th><th>名称</th><th>存储类型</th><th>可见性</th><th>生命周期</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody><tr v-for="image in images" :key="image.imgId"><td>{{ image.imgId }}</td><td>{{ image.imgName }}</td><td>{{ storageLabels[image.storageKind] }}</td><td>{{ visibilityLabels[image.visibility] }}</td><td>{{ lifecycleLabels[image.lifecycle] }}</td><td>{{ image.createDate }}</td><td><button class="danger" @click="remove(image.imgId)">删除</button></td></tr></tbody>
   </table>
 </template>

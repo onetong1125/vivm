@@ -11,7 +11,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import javax.sql.DataSource;
 
 @Configuration
-@MapperScan("com.ttt.vivm.dao.identity.mapper")
+@MapperScan({"com.ttt.vivm.dao.identity.mapper", "com.ttt.vivm.dao.image.mapper"})
 public class MybatisConfiguration {
 
     @Bean

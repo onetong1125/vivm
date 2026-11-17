@@ -1,5 +1,7 @@
 package com.ttt.vivm.identity;
 
+import com.ttt.vivm.support.MySqlIntegrationSupport;
+
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;

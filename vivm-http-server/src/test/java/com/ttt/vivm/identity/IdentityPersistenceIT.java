@@ -1,5 +1,7 @@
 package com.ttt.vivm.identity;
 
+import com.ttt.vivm.support.MySqlIntegrationSupport;
+
 import com.ttt.vivm.cycle.domain.identity.model.entity.UserE;
 import com.ttt.vivm.cycle.domain.identity.repo.UserRepository;
 import org.junit.jupiter.api.AfterAll;

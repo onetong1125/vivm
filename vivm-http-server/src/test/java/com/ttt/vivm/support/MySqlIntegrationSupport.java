@@ -1,4 +1,4 @@
-package com.ttt.vivm.identity;
+package com.ttt.vivm.support;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,12 +10,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-final class MySqlIntegrationSupport {
+public final class MySqlIntegrationSupport {
 
     private MySqlIntegrationSupport() {
     }
 
-    static DatabaseConfig loadConfig() {
+    public static DatabaseConfig loadConfig() {
         String configPath = System.getProperty("vivm.it.config");
         if (configPath == null) {
             throw new IllegalStateException("Set -Dvivm.it.config to a local datasource properties file");
@@ -32,9 +32,9 @@ final class MySqlIntegrationSupport {
                 properties.getProperty("spring.datasource.password"));
     }
 
-    record DatabaseConfig(String sourceUrl, String username, String password) {
+    public record DatabaseConfig(String sourceUrl, String username, String password) {
 
-        String databaseUrl(String database) {
+        public String databaseUrl(String database) {
             int pathStart = sourceUrl.indexOf('/', "jdbc:mysql://".length());
             int queryStart = sourceUrl.indexOf('?');
             String suffix = queryStart >= 0 ? sourceUrl.substring(queryStart) : "";
@@ -48,11 +48,11 @@ final class MySqlIntegrationSupport {
             return sourceUrl.substring(0, pathStart + 1) + suffix;
         }
 
-        void createDatabase(String database) {
+        public void createDatabase(String database) {
             executeOnServer("CREATE DATABASE `" + database + "` CHARACTER SET utf8mb4");
         }
 
-        void dropDatabase(String database) {
+        public void dropDatabase(String database) {
             executeOnServer("DROP DATABASE IF EXISTS `" + database + "`");
         }
 
