@@ -2,12 +2,13 @@ package com.ttt.vivm.cycle.domain.operation.model.entity;
 
 import com.ttt.vivm.cycle.domain.operation.model.valueobj.OperationStatus;
 import com.ttt.vivm.cycle.domain.operation.model.valueobj.OperationStep;
-
+import com.ttt.vivm.cycle.domain.operation.model.valueobj.OperationType;
 import java.time.LocalDateTime;
 
 public record OperationE(
     String id,
     int actorId,
+    OperationType operationType,
     OperationStatus status,
     OperationStep step,
     LocalDateTime createdAt,
@@ -17,10 +18,12 @@ public record OperationE(
   public static OperationE start(
       String id,
       int actorId,
+      OperationType type,
       LocalDateTime now) {
     return new OperationE(
         id,
         actorId,
+        type,
         OperationStatus.RUNNING,
         OperationStep.VALIDATING,
         now,
@@ -45,7 +48,7 @@ public record OperationE(
       throw new IllegalStateException("Cannot complete operation " + id + " from " + status + "/" + step);
     }
     return new OperationE(
-        id, actorId, OperationStatus.SUCCEEDED, step,
+        id, actorId, operationType, OperationStatus.SUCCEEDED, step,
         createdAt, startedAt, completedAt);
   }
 
@@ -54,7 +57,7 @@ public record OperationE(
       throw new IllegalStateException("Cannot advance operation " + id + " from " + status + "/" + step + " to " + next);
     }
     return new OperationE(
-        id, actorId, status, next,
+        id, actorId, operationType, status, next,
         createdAt, startedAt, finishedAt);
   }
 
@@ -64,7 +67,7 @@ public record OperationE(
           "Cannot mark operation " + id + " for review from " + status + "/" + step);
     }
     return new OperationE(
-        id, actorId, OperationStatus.REQUIRES_REVIEW, step,
+        id, actorId, operationType, OperationStatus.REQUIRES_REVIEW, step,
         createdAt, startedAt, finishedAt);
   }
 
@@ -74,7 +77,7 @@ public record OperationE(
           "Cannot fail validation for operation " + id + " from " + status + "/" + step);
     }
     return new OperationE(
-        id, actorId, OperationStatus.FAILED, step,
+        id, actorId, operationType, OperationStatus.FAILED, step,
         createdAt, startedAt, failedAt);
   }
 }
