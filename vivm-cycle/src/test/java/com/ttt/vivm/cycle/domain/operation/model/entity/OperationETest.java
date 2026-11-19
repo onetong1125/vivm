@@ -140,4 +140,38 @@ class OperationETest {
 
     assertThrows(IllegalStateException.class, completed::requireReview);
   }
+
+  @Test
+  void validationFailureEndsOperationAtValidationStep() {
+    LocalDateTime startedAt = LocalDateTime.of(2026, 11, 19, 14, 0);
+    LocalDateTime failedAt = startedAt.plusSeconds(1);
+    OperationE validating = OperationE.start(
+        "00000000-0000-0000-0000-000000000001", 7, startedAt);
+
+    OperationE failed = validating.failValidation(failedAt);
+
+    assertEquals(OperationStatus.FAILED, failed.status());
+    assertEquals(OperationStep.VALIDATING, failed.step());
+    assertEquals(failedAt, failed.finishedAt());
+  }
+
+  @Test
+  void validationFailureCannotBeRecordedTwice() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 19, 14, 0);
+    OperationE failed = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, now)
+        .failValidation(now.plusSeconds(1));
+
+    assertThrows(IllegalStateException.class, () -> failed.failValidation(now.plusSeconds(2)));
+  }
+
+  @Test
+  void remoteExecutionCannotBeReportedAsValidationFailure() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 19, 14, 0);
+    OperationE executing = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, now)
+        .beginRemoteExecution();
+
+    assertThrows(IllegalStateException.class, () -> executing.failValidation(now.plusSeconds(1)));
+  }
 }

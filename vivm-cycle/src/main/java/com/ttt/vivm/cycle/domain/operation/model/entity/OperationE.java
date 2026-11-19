@@ -67,4 +67,14 @@ public record OperationE(
         id, actorId, OperationStatus.REQUIRES_REVIEW, step,
         createdAt, startedAt, finishedAt);
   }
+
+  public OperationE failValidation(LocalDateTime failedAt) {
+    if (status != OperationStatus.RUNNING || step != OperationStep.VALIDATING) {
+      throw new IllegalStateException(
+          "Cannot fail validation for operation " + id + " from " + status + "/" + step);
+    }
+    return new OperationE(
+        id, actorId, OperationStatus.FAILED, step,
+        createdAt, startedAt, failedAt);
+  }
 }
