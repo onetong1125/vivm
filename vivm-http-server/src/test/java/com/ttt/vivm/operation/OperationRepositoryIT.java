@@ -54,4 +54,30 @@ class OperationRepositoryIT {
 
         assertThat(operations.findById(id)).contains(operation);
     }
+
+    @Test
+    void validationFailurePersistsFinishTimeAndVersion() {
+        LocalDateTime startedAt = LocalDateTime.of(2026, 11, 19, 15, 0);
+        OperationE validating = OperationE.start(UUID.randomUUID().toString(), 7, OperationType.START_VM, startedAt);
+        operations.create(validating);
+
+        OperationE failed = validating.failValidation(startedAt.plusSeconds(1));
+        assertThat(operations.tryUpdate(validating, failed)).isTrue();
+        assertThat(operations.findById(validating.id())).contains(failed);
+    }
+
+    @Test
+    void staleValidationFailureCannotOverwriteRemoteExecution() {
+        String id = UUID.randomUUID().toString();
+        LocalDateTime startedAt = LocalDateTime.of(2026, 11, 19, 15, 0);
+        OperationE validating = OperationE.start(id, 7, OperationType.START_VM, startedAt);
+        operations.create(validating);
+
+        OperationE executing = validating.beginRemoteExecution();
+        OperationE failed = validating.failValidation(startedAt.plusSeconds(1));
+
+        assertThat(operations.tryUpdate(validating, executing)).isTrue();
+        assertThat(operations.tryUpdate(validating, failed)).isFalse();
+        assertThat(operations.findById(id)).contains(executing);
+    }
 }

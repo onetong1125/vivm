@@ -21,6 +21,7 @@ class OperationETest {
 
     OperationE operation = OperationE.start(operationId, actorId, OperationType.START_VM, now);
 
+    assertEquals(0L, operation.version());
     assertEquals(operationId, operation.id());
     assertEquals(actorId, operation.actorId());
     assertEquals(OperationStatus.RUNNING, operation.status());
@@ -59,6 +60,7 @@ class OperationETest {
 
     OperationE pendingReview = executing.requireReview();
 
+    assertEquals(2L, pendingReview.version());
     assertEquals(OperationStatus.REQUIRES_REVIEW, pendingReview.status());
     assertEquals(OperationStep.REMOTE_EXECUTING, pendingReview.step());
   }
@@ -100,6 +102,7 @@ class OperationETest {
     assertNull(updating.finishedAt());
 
     OperationE completed = updating.succeed(finishedAt);
+    assertEquals(4L, completed.version());
     assertEquals(OperationStatus.SUCCEEDED, completed.status());
     assertEquals(finishedAt, completed.finishedAt());
     assertEquals(startedAt, completed.startedAt());
@@ -151,6 +154,7 @@ class OperationETest {
 
     OperationE failed = validating.failValidation(failedAt);
 
+    assertEquals(1L, failed.version());
     assertEquals(OperationStatus.FAILED, failed.status());
     assertEquals(OperationStep.VALIDATING, failed.step());
     assertEquals(failedAt, failed.finishedAt());

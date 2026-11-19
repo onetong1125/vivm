@@ -9,4 +9,7 @@ public interface OperationRepository {
   void create(OperationE operation);
 
   Optional<OperationE> findById(String id);
+
+  /** Persists one transition if the stored version and status still match the expected operation. */
+  boolean tryUpdate(OperationE expected, OperationE next);
 }

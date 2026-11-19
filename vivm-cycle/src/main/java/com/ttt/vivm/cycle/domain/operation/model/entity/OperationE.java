@@ -13,7 +13,8 @@ public record OperationE(
     OperationStep step,
     LocalDateTime createdAt,
     LocalDateTime startedAt,
-    LocalDateTime finishedAt) {
+    LocalDateTime finishedAt,
+    long version) {
 
   public static OperationE start(
       String id,
@@ -28,7 +29,8 @@ public record OperationE(
         OperationStep.VALIDATING,
         now,
         now,
-        null);
+        null,
+        0L);
   }
 
   public OperationE beginRemoteExecution() {
@@ -49,7 +51,7 @@ public record OperationE(
     }
     return new OperationE(
         id, actorId, operationType, OperationStatus.SUCCEEDED, step,
-        createdAt, startedAt, completedAt);
+        createdAt, startedAt, completedAt, version + 1);
   }
 
   private OperationE advance(OperationStep expected, OperationStep next) {
@@ -58,7 +60,7 @@ public record OperationE(
     }
     return new OperationE(
         id, actorId, operationType, status, next,
-        createdAt, startedAt, finishedAt);
+        createdAt, startedAt, finishedAt, version + 1);
   }
 
   public OperationE requireReview() {
@@ -68,7 +70,7 @@ public record OperationE(
     }
     return new OperationE(
         id, actorId, operationType, OperationStatus.REQUIRES_REVIEW, step,
-        createdAt, startedAt, finishedAt);
+        createdAt, startedAt, finishedAt, version + 1);
   }
 
   public OperationE failValidation(LocalDateTime failedAt) {
@@ -78,6 +80,6 @@ public record OperationE(
     }
     return new OperationE(
         id, actorId, operationType, OperationStatus.FAILED, step,
-        createdAt, startedAt, failedAt);
+        createdAt, startedAt, failedAt, version + 1);
   }
 }

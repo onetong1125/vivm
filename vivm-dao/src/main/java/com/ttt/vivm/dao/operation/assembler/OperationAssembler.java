@@ -20,6 +20,7 @@ public final class OperationAssembler {
     record.createdAt = operation.createdAt();
     record.startedAt = operation.startedAt();
     record.finishedAt = operation.finishedAt();
+    record.version = operation.version();
     return record;
   }
 
@@ -32,6 +33,7 @@ public final class OperationAssembler {
         OperationStep.valueOf(record.step),
         record.createdAt,
         record.startedAt,
-        record.finishedAt);
+        record.finishedAt,
+        record.version);
   }
 }

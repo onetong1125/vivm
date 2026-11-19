@@ -17,4 +17,5 @@ public class OperationRecord {
   public LocalDateTime createdAt;
   public LocalDateTime startedAt;
   public LocalDateTime finishedAt;
+  public long version;
 }
