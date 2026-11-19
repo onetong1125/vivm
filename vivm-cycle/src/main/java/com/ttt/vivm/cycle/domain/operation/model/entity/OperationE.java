@@ -36,6 +36,19 @@ public record OperationE(
     return advance(OperationStep.REMOTE_EXECUTING, OperationStep.REMOTE_SUCCEEDED);
   }
 
+  public OperationE beginMetadataUpdate() {
+    return advance(OperationStep.REMOTE_SUCCEEDED, OperationStep.METADATA_UPDATING);
+  }
+
+  public OperationE succeed(LocalDateTime completedAt) {
+    if (status != OperationStatus.RUNNING || step != OperationStep.METADATA_UPDATING) {
+      throw new IllegalStateException("Cannot complete operation " + id + " from " + status + "/" + step);
+    }
+    return new OperationE(
+        id, actorId, OperationStatus.SUCCEEDED, step,
+        createdAt, startedAt, completedAt);
+  }
+
   private OperationE advance(OperationStep expected, OperationStep next) {
     if (status != OperationStatus.RUNNING || step != expected) {
       throw new IllegalStateException("Cannot advance operation " + id + " from " + status + "/" + step + " to " + next);
@@ -46,6 +59,10 @@ public record OperationE(
   }
 
   public OperationE requireReview() {
+    if (status != OperationStatus.RUNNING) {
+      throw new IllegalStateException(
+          "Cannot mark operation " + id + " for review from " + status + "/" + step);
+    }
     return new OperationE(
         id, actorId, OperationStatus.REQUIRES_REVIEW, step,
         createdAt, startedAt, finishedAt);

@@ -83,4 +83,61 @@ class OperationETest {
     OperationE executing = validating.beginRemoteExecution();
     assertThrows(IllegalStateException.class, executing::beginRemoteExecution);
   }
+
+  @Test
+  void operationSucceedsAfterMetadataUpdateAndRecordsFinishTime() {
+    LocalDateTime startedAt = LocalDateTime.of(2026, 11, 19, 10, 0);
+    LocalDateTime finishedAt = startedAt.plusSeconds(3);
+    OperationE remoteSucceeded = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, startedAt)
+        .beginRemoteExecution()
+        .markRemoteSucceeded();
+
+    OperationE updating = remoteSucceeded.beginMetadataUpdate();
+    assertEquals(OperationStep.METADATA_UPDATING, updating.step());
+    assertEquals(OperationStatus.RUNNING, updating.status());
+    assertNull(updating.finishedAt());
+
+    OperationE completed = updating.succeed(finishedAt);
+    assertEquals(OperationStatus.SUCCEEDED, completed.status());
+    assertEquals(finishedAt, completed.finishedAt());
+    assertEquals(startedAt, completed.startedAt());
+  }
+
+  @Test
+  void cannotCompleteBeforeMetadataUpdateBegins() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 19, 10, 0);
+    OperationE remoteSucceeded = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, now)
+        .beginRemoteExecution()
+        .markRemoteSucceeded();
+
+    assertThrows(IllegalStateException.class, () -> remoteSucceeded.succeed(now));
+  }
+
+  @Test
+  void cannotCompleteTwiceOrWhileAwaitingReview() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 19, 10, 0);
+    OperationE updating = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, now)
+        .beginRemoteExecution()
+        .markRemoteSucceeded()
+        .beginMetadataUpdate();
+
+    assertThrows(IllegalStateException.class, () -> updating.succeed(now).succeed(now.plusSeconds(1)));
+    assertThrows(IllegalStateException.class, () -> updating.requireReview().succeed(now));
+  }
+
+  @Test
+  void successfulOperationCannotBeMarkedForReview() {
+    LocalDateTime now = LocalDateTime.of(2026, 11, 19, 10, 0);
+    OperationE completed = OperationE.start(
+            "00000000-0000-0000-0000-000000000001", 7, now)
+        .beginRemoteExecution()
+        .markRemoteSucceeded()
+        .beginMetadataUpdate()
+        .succeed(now.plusSeconds(3));
+
+    assertThrows(IllegalStateException.class, completed::requireReview);
+  }
 }
