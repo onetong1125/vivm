@@ -1,4 +1,4 @@
-package com.ttt.vivm.cycle.domain.resource.image.domainservice;
+package com.ttt.vivm.cycle.domain.resource.image.service;
 
 import com.ttt.vivm.cycle.domain.resource.image.model.entity.ImageE;
 import com.ttt.vivm.cycle.domain.resource.image.model.entity.StoragePoolE;
