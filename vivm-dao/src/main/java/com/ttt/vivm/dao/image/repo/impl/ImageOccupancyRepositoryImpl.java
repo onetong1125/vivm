@@ -39,4 +39,9 @@ public class ImageOccupancyRepositoryImpl implements ImageOccupancyRepository {
         mapper.insertGroup(requested, holderId, vmId, acquiredAt);
         return true;
     }
+
+    @Override
+    public void releaseForVm(int vmId, String holderId) {
+        mapper.deleteForVm(vmId, holderId);
+    }
 }

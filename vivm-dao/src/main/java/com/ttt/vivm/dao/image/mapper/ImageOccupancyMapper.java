@@ -4,6 +4,7 @@ import com.ttt.vivm.cycle.domain.resource.image.model.valueobj.ImageOccupancy;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -37,4 +38,7 @@ public interface ImageOccupancyMapper {
             """)
     void insertGroup(@Param("requested") Set<ImageOccupancy> requested, @Param("holderId") String holderId,
                      @Param("vmId") int vmId, @Param("acquiredAt") LocalDateTime acquiredAt);
+
+    @Delete("DELETE FROM image_occupancy WHERE holder_id = #{holderId} AND vm_id = #{vmId}")
+    void deleteForVm(@Param("vmId") int vmId, @Param("holderId") String holderId);
 }

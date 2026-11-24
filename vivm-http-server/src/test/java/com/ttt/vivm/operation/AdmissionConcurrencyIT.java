@@ -94,6 +94,33 @@ class AdmissionConcurrencyIT {
         assertThat(rows(300)).containsExactly("300:READ", "301:READ", "302:WRITE");
     }
 
+    @Test
+    void releasingOneVmKeepsSiblingReadsUntilTheLastHolderReleases() {
+        seedTree(400);
+        assertThat(acquire(402, 8, "vm8-first")).isTrue();
+        assertThat(acquire(403, 9, "vm9-first")).isTrue();
+
+        occupancy.releaseForVm(8, "vm8-first");
+        assertThat(rows(400)).containsExactly("400:READ", "401:READ", "403:WRITE");
+        assertThat(acquire(400, 10, "root-after-stop")).isFalse();
+
+        occupancy.releaseForVm(9, "vm9-first");
+        assertThat(acquire(400, 10, "root-after-stop")).isTrue();
+    }
+
+    @Test
+    void staleReleaseCannotClearANewerStartOfTheSameVm() {
+        seedTree(500);
+        assertThat(acquire(502, 11, "previous-start")).isTrue();
+        occupancy.releaseForVm(11, "previous-start");
+        assertThat(acquire(502, 11, "current-start")).isTrue();
+
+        occupancy.releaseForVm(11, "previous-start");
+        occupancy.releaseForVm(12, "current-start");
+        assertThat(rows(500)).containsExactly("500:READ", "501:READ", "502:WRITE");
+        assertThat(acquire(502, 12, "contender")).isFalse();
+    }
+
     private boolean acquire(int imageId, int vmId, String holder) {
         return occupancy.tryAcquireForVmStart(imageId, vmId, holder, LocalDateTime.now());
     }
