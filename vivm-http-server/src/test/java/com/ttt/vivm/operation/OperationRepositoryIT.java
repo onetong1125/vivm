@@ -53,6 +53,8 @@ class OperationRepositoryIT {
         operations.create(operation);
 
         assertThat(operations.findById(id)).contains(operation);
+        assertThat(operations.findByIdAndActorId(id, operation.actorId())).contains(operation);
+        assertThat(operations.findByIdAndActorId(id, 8)).isEmpty();
     }
 
     @Test

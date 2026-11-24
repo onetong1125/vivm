@@ -1,5 +1,6 @@
 package com.ttt.vivm.dao.operation.repo.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.ttt.vivm.cycle.domain.operation.model.entity.OperationE;
 import com.ttt.vivm.cycle.domain.operation.repo.OperationRepository;
@@ -26,6 +27,14 @@ public class OperationRepositoryImpl implements OperationRepository {
   public Optional<OperationE> findById(String id) {
     return Optional.ofNullable(operationMapper.selectById(id))
         .map(OperationAssembler::toEntity);
+  }
+
+  @Override
+  public Optional<OperationE> findByIdAndActorId(String id, int actorId) {
+    QueryWrapper<OperationRecord> query = new QueryWrapper<OperationRecord>()
+        .eq("id", id)
+        .eq("actor_id", actorId);
+    return Optional.ofNullable(operationMapper.selectOne(query)).map(OperationAssembler::toEntity);
   }
 
   @Override

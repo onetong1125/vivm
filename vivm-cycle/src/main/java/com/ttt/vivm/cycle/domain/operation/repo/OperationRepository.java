@@ -10,6 +10,8 @@ public interface OperationRepository {
 
   Optional<OperationE> findById(String id);
 
+  Optional<OperationE> findByIdAndActorId(String id, int actorId);
+
   /** Persists one transition if the stored version and status still match the expected operation. */
   boolean tryUpdate(OperationE expected, OperationE next);
 }
