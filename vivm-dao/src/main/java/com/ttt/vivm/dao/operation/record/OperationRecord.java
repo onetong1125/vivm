@@ -13,6 +13,7 @@ public class OperationRecord {
   public Integer poolId;
   public String operationType;
   public String resourceType;
+  public String resourceId;
   public String status;
   public String step;
   public LocalDateTime createdAt;

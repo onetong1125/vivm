@@ -183,6 +183,71 @@ class AdmissionConcurrencyIT {
         assertThat(admissions.tryAdmit(603, newOperation())).isTrue();
     }
 
+    @Test
+    void vmStartReservesItsBoundPoolAndChainUnderTheOperationId() {
+        seedTree(700);
+        bindVm(21, 702);
+        OperationE operation = newOperation();
+
+        assertThat(admissions.tryAdmitVmStart(21, operation)).isTrue();
+
+        assertThat(jdbc.queryForList("SELECT resource_id FROM operation_task WHERE id = ? AND pool_id = 700",
+                String.class, operation.id())).containsExactly("21");
+        assertThat(jdbc.queryForList("SELECT operation_id FROM pool_admission WHERE pool_id = 700", String.class))
+                .containsExactly(operation.id());
+        assertThat(rows(700)).containsExactly("700:READ", "701:READ", "702:WRITE");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM image_occupancy WHERE holder_id = ? AND vm_id = 21",
+                Integer.class, operation.id())).isEqualTo(3);
+    }
+
+    @Test
+    void busyPoolRejectsStartBeforeCreatingTaskOrTakingOccupancy() {
+        seedTree(710);
+        bindVm(22, 712);
+        OperationE active = newOperation();
+        OperationE rejected = newOperation();
+        assertThat(admissions.tryAdmit(710, active)).isTrue();
+
+        assertThat(admissions.tryAdmitVmStart(22, rejected)).isFalse();
+
+        assertThat(operations.findById(rejected.id())).isEmpty();
+        assertThat(rows(710)).isEmpty();
+        assertThat(jdbc.queryForList("SELECT operation_id FROM pool_admission WHERE pool_id = 710", String.class))
+                .containsExactly(active.id());
+    }
+
+    @Test
+    void occupiedAncestorRejectsStartWithoutReservingPool() {
+        seedTree(720);
+        bindVm(23, 722);
+        assertThat(acquire(720, 24, "running-root")).isTrue();
+        OperationE rejected = newOperation();
+
+        assertThat(admissions.tryAdmitVmStart(23, rejected)).isFalse();
+
+        assertThat(operations.findById(rejected.id())).isEmpty();
+        assertThat(rows(720)).containsExactly("720:WRITE");
+        assertThat(admissions.tryAdmit(720, newOperation())).isTrue();
+    }
+
+    @Test
+    void taskInsertFailureRollsBackBothPoolAndImageReservations() {
+        seedTree(730);
+        bindVm(25, 732);
+        OperationE duplicate = newOperation();
+        operations.create(duplicate);
+
+        assertThatThrownBy(() -> admissions.tryAdmitVmStart(25, duplicate)).isInstanceOf(DuplicateKeyException.class);
+
+        assertThat(rows(730)).isEmpty();
+        assertThat(admissions.tryAdmitVmStart(25, newOperation())).isTrue();
+    }
+
+    private void bindVm(int vmId, int imageId) {
+        jdbc.update("INSERT INTO vm (vm_id, vm_name, vm_status, vm_type) VALUES (?, ?, 0, 0)", vmId, "vm-" + vmId);
+        jdbc.update("INSERT INTO img_vm (vm_id, img_id) VALUES (?, ?)", vmId, imageId);
+    }
+
     private OperationE newOperation() {
         return OperationE.start(UUID.randomUUID().toString(), 7, OperationType.START_VM, LocalDateTime.now());
     }
