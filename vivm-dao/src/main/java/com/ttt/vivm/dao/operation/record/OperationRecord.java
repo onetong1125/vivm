@@ -10,6 +10,7 @@ public class OperationRecord {
   @TableId(type = IdType.INPUT)
   public String id;
   public Integer actorId;
+  public Integer poolId;
   public String operationType;
   public String resourceType;
   public String status;
