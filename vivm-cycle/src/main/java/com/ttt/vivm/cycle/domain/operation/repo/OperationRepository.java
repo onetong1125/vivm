@@ -14,4 +14,11 @@ public interface OperationRepository {
 
   /** Persists one transition if the stored version and status still match the expected operation. */
   boolean tryUpdate(OperationE expected, OperationE next);
+
+  default OperationE update(OperationE expected, OperationE next) {
+    if (!tryUpdate(expected, next)) {
+      throw new java.util.ConcurrentModificationException("Stale operation " + expected.id());
+    }
+    return next;
+  }
 }

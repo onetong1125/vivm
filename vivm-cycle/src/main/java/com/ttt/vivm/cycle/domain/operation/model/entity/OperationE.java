@@ -73,6 +73,14 @@ public record OperationE(
         createdAt, startedAt, finishedAt, version + 1);
   }
 
+  public OperationE failRemoteExecution(LocalDateTime failedAt) {
+    if (status != OperationStatus.RUNNING || step != OperationStep.REMOTE_EXECUTING) {
+      throw new IllegalStateException("Cannot fail remote operation " + id + " from " + status + "/" + step);
+    }
+    return new OperationE(id, actorId, operationType, OperationStatus.FAILED, step,
+        createdAt, startedAt, failedAt, version + 1);
+  }
+
   public OperationE failValidation(LocalDateTime failedAt) {
     if (status != OperationStatus.RUNNING || step != OperationStep.VALIDATING) {
       throw new IllegalStateException(

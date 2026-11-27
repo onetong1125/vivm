@@ -51,6 +51,10 @@ final class LibvirtVirtualizationAdapter implements VirtualizationGateway {
         try {
             domain.create();
             return runtime(domain);
+        } catch (ExternalOperationException | NumberFormatException error) {
+            // Metadata reads can fail after libvirt has already started the domain.
+            throw new ExternalOperationException("START_VM", ExternalOperationException.Outcome.UNKNOWN,
+                    "VM start could not be confirmed: " + error.getMessage(), error);
         } catch (LibvirtException error) {
             throw unknown("START_VM", error);
         }

@@ -1,6 +1,11 @@
 package com.ttt.vivm.operation;
 
+import com.ttt.vivm.connector.FakeExternalEnvironment;
+import com.ttt.vivm.cycle.application.VmAppService;
 import com.ttt.vivm.cycle.domain.operation.model.entity.OperationE;
+import com.ttt.vivm.cycle.domain.operation.model.valueobj.OperationStatus;
+import com.ttt.vivm.cycle.port.ExternalOperationException;
+import com.ttt.vivm.cycle.port.VirtualizationGateway;
 import com.ttt.vivm.cycle.domain.operation.model.valueobj.OperationType;
 import com.ttt.vivm.cycle.domain.operation.repo.OperationRepository;
 import com.ttt.vivm.cycle.domain.operation.repo.PoolAdmissionRepository;
@@ -24,6 +29,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -53,6 +63,8 @@ class AdmissionConcurrencyIT {
 
     @Autowired private ImageOccupancyRepository occupancy;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private VmAppService vmAppService;
+    @MockitoBean private FakeExternalEnvironment gateway;
     @Autowired private PoolAdmissionRepository admissions;
     @Autowired private OperationRepository operations;
 
@@ -241,6 +253,75 @@ class AdmissionConcurrencyIT {
 
         assertThat(rows(730)).isEmpty();
         assertThat(admissions.tryAdmitVmStart(25, newOperation())).isTrue();
+    }
+
+    @Test
+    void busyPoolPreventsRemoteStart() {
+        seedTree(800);
+        bindVm(31, 802);
+        assertThat(admissions.tryAdmit(800, newOperation())).isTrue();
+        assertThat(vmAppService.startVm(7, "vm-31")).isEmpty();
+        verifyNoInteractions(gateway);
+    }
+
+    @Test
+    void confirmedStartCommitsMetadataAndReleasesOnlyThePool() {
+        seedTree(810);
+        bindVm(32, 812);
+        when(gateway.startVm("vm-32")).thenAnswer(call -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            assertThat(rows(810)).hasSize(3);
+            return new VirtualizationGateway.VirtualMachineRuntime(true, 0, null, "localhost:5901", "vm-32");
+        });
+
+        OperationE result = vmAppService.startVm(7, "vm-32").orElseThrow();
+
+        assertThat(operations.findByIdAndActorId(result.id(), 7).orElseThrow().status()).isEqualTo(OperationStatus.SUCCEEDED);
+        assertThat(jdbc.queryForObject("SELECT vm_vnc FROM vm WHERE vm_id=32 AND vm_status=1", String.class))
+                .isEqualTo("localhost:5901");
+        assertThat(jdbc.queryForObject("SELECT status FROM img WHERE img_id=812", Integer.class)).isZero();
+        assertThat(rows(810)).containsExactly("810:READ", "811:READ", "812:WRITE");
+        assertThat(admissions.tryAdmit(810, newOperation())).isTrue();
+    }
+
+    @Test
+    void confirmedStartFailureReleasesPoolAndOccupancy() {
+        seedTree(820);
+        bindVm(33, 822);
+        when(gateway.startVm("vm-33")).thenThrow(new ExternalOperationException(
+                "START_VM", ExternalOperationException.Outcome.FAILED, "start rejected"));
+        assertThatThrownBy(() -> vmAppService.startVm(7, "vm-33")).isInstanceOfSatisfying(
+                VmAppService.StartFailure.class, error -> assertThat(operations.findById(error.operation().id())
+                        .orElseThrow().status()).isEqualTo(OperationStatus.FAILED));
+        assertThat(rows(820)).isEmpty();
+        assertThat(admissions.tryAdmit(820, newOperation())).isTrue();
+    }
+
+    @Test
+    void unknownRemoteOutcomeKeepsReservationsForReview() {
+        seedTree(830);
+        bindVm(34, 832);
+        when(gateway.startVm("vm-34")).thenThrow(new ExternalOperationException(
+                "START_VM", ExternalOperationException.Outcome.UNKNOWN, "response lost"));
+        assertThatThrownBy(() -> vmAppService.startVm(7, "vm-34")).isInstanceOfSatisfying(
+                VmAppService.StartFailure.class, error -> assertThat(operations.findById(error.operation().id())
+                        .orElseThrow().status()).isEqualTo(OperationStatus.REQUIRES_REVIEW));
+        assertThat(rows(830)).hasSize(3);
+        assertThat(admissions.tryAdmit(830, newOperation())).isFalse();
+    }
+
+    @Test
+    void failedMetadataWriteRollsBackSuccessAndKeepsReservationsForReview() {
+        seedTree(840);
+        bindVm(35, 842);
+        when(gateway.startVm("vm-35")).thenReturn(new VirtualizationGateway.VirtualMachineRuntime(
+                true, 0, null, "x".repeat(300), "vm-35"));
+        assertThatThrownBy(() -> vmAppService.startVm(7, "vm-35")).isInstanceOfSatisfying(
+                VmAppService.StartFailure.class, error -> assertThat(operations.findById(error.operation().id())
+                        .orElseThrow().status()).isEqualTo(OperationStatus.REQUIRES_REVIEW));
+        assertThat(jdbc.queryForObject("SELECT vm_status FROM vm WHERE vm_id=35", Integer.class)).isZero();
+        assertThat(rows(840)).hasSize(3);
+        assertThat(admissions.tryAdmit(840, newOperation())).isFalse();
     }
 
     private void bindVm(int vmId, int imageId) {
